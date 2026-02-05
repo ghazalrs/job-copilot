@@ -3,12 +3,15 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 
-# Python
+# Python / Backend
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Environment variables
 .env
 .env.*
 !.env.example
@@ -22,10 +25,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Extension build output (Plasmo / WXT)
+# Plasmo / Extension build output
 .wxt/
 .plasmo/
-extension/dist/
+extension/.plasmo/
+extension/build/
 extension/.output/
 
 # Test artifacts
@@ -33,4 +37,5 @@ playwright-report/
 test-results/
 .pytest_cache/
 
+# Project spec 
 CLAUDE.md
