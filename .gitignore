@@ -1,0 +1,36 @@
+# Node / Extension
+node_modules/
+dist/
+build/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Extension build output (Plasmo / WXT)
+.wxt/
+.plasmo/
+extension/dist/
+extension/.output/
+
+# Test artifacts
+playwright-report/
+test-results/
+.pytest_cache/
+
+CLAUDE.md
