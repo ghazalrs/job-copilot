@@ -28,7 +28,8 @@
       "https://*/*"
     ],
     "permissions": [
-      "sidePanel"
+      "sidePanel",
+      "activeTab"
     ],
     "side_panel": {
       "default_path": "sidepanel.html"
