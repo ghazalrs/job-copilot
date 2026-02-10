@@ -29,7 +29,8 @@
     ],
     "permissions": [
       "sidePanel",
-      "activeTab"
+      "activeTab",
+      "storage"
     ],
     "side_panel": {
       "default_path": "sidepanel.html"
