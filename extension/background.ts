@@ -1,5 +1,11 @@
 export {}
 
+let geminiApiKey: string | null = null
+
+chrome.storage.local.get("geminiApiKey").then(res => {
+  geminiApiKey = res.geminiApiKey
+})
+
 // Open side panel when extension icon is clicked
 chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
@@ -37,8 +43,6 @@ chrome.runtime.onMessage.addListener((message: SummarizeRequest, sender, sendRes
 })
 
 async function summarizeWithGemini(jobText: string): Promise<SummarizeResponse> {
-  // Get API key from storage
-  const { geminiApiKey } = await chrome.storage.local.get("geminiApiKey")
 
   if (!geminiApiKey) {
     return { success: false, error: "Gemini API key not set. Please add your API key in settings." }
