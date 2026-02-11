@@ -1,141 +1,194 @@
-## Architecture Overview
+# Phase 2 
 
-### Extension components
-- **Content Script**
-  - Reads the DOM and extracts job description text
-  - Provides “selected text” extraction
-  - Returns: `{ jobText, title?, company?, url }`
-
-- **Side Panel UI**
-  - React UI that displays extraction + summary
-  - Triggers extraction and summary requests
-  - Stores last result in `chrome.storage.local`
-
-- **Background / Service Worker**
-  - Orchestrates messages between side panel and content script
-  - Makes API calls to summarization backend (optional for V1)
-  - Keeps secrets (API keys) out of the page context
-
-### Summarization
-Phase 1 can support **either**:
-- **Local stub summarizer** (no backend): returns a fake structured summary for UI development
-- **Backend summarizer** (recommended once extraction works): side panel → background → API → returns structured JSON
-
-### Architecture Diagram
+## High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                            BROWSER                                          │
+│                         PHASE 2 SYSTEM                                      │
 │                                                                             │
-│  ┌──────────────────┐         ┌──────────────────┐                          │
-│  │    SIDE PANEL    │         │   BACKGROUND     │                          │
-│  │  (sidepanel.tsx) │         │ (background.ts)  │                          │
-│  │                  │         │                  │                          │
-│  │  • React UI      │         │  • Service Worker│                          │
-│  │  • User clicks   │         │  • Always running│                          │
-│  │  • Shows results │         │  • Holds secrets │                          │
-│  └────────┬─────────┘         └────────┬─────────┘                          │
-│           │                            │                                    │
-│           │ chrome.tabs.sendMessage    │ fetch()                            │
-│           │                            │                                    │
-│           ▼                            ▼                                    │
-│  ┌──────────────────┐         ┌──────────────────┐                          │ 
-│  │  CONTENT SCRIPT  │         │     BACKEND      │  (outside browser)       │
-│  │  (extractor.ts)  │         │   (your API)     │                          │
-│  │                  │         │                  │                          │
-│  │  • Runs in page  │         │  • Summarization │                          │
-│  │  • Reads DOM     │         │  • LLM calls     │                          │
-│  │  • Extracts text │         │  • Data storage  │                          │
-│  └──────────────────┘         └──────────────────┘                          │
-│           │                                                                 │
-│           ▼                                                                 │
-│  ┌──────────────────┐                                                       │
-│  │     WEB PAGE     │                                                       │
-│  │  (linkedin.com)  │                                                       │
-│  └──────────────────┘                                                       │
+│  ┌──────────────────┐         ┌──────────────────┐         ┌─────────────┐  │
+│  │    WEB APP       │         │  FASTAPI BACKEND │         │   DATABASE  │  │
+│  │   (React SPA)    │         │                  │         │  (Postgres) │  │
+│  │                  │         │                  │         │             │  │
+│  │ • Google Login   │◄────────│ • Auth (JWT)     │◄────────│ • Users     │  │
+│  │ • Resume Upload  │   HTTPS │ • Store Resume   │         │ • Resumes   │  │
+│  │ • Edit Templates │         │ • Serve Templates│         │ • Templates │  │
+│  └──────────────────┘         └──────────────────┘         └─────────────┘  │
+│           │                            ▲                                    │
+│           │ Opens /login               │ API Calls                          │
+│           │ Opens /settings            │ (with JWT)                         │
+│           ▼                            │                                    │
+│  ┌──────────────────────────────────────────────────┐                       │
+│  │         BROWSER EXTENSION                        │                       │
+│  │                                                  │                       │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  │                       │
+│  │  │ Side Panel │  │ Background │  │  Content   │  │                       │
+│  │  │            │  │            │  │  Script    │  │                       │
+│  │  │ • Shows    │  │ • Stores   │  │            │  │                       │
+│  │  │   Auth     │  │   JWT      │  │ • Extracts │  │                       │
+│  │  │   Status   │  │ • Calls    │  │   Job Text │  │                       │ 
+│  │  │ • Settings │  │   Backend  │  │            │  │                       │
+│  │  │   Button   │  │   API      │  │            │  │                       │
+│  │  └────────────┘  └────────────┘  └────────────┘  │                       │
+│  └──────────────────────────────────────────────────┘                       │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Current Flow (Phase 1 - Extraction Only)
+---
+
+## User Flow (Phase 2)
+
+### First-time User Flow
 
 ```
-User clicks "Extract"
+User opens extension
         │
         ▼
 ┌───────────────────┐
-│    SIDE PANEL     │  1. User clicks button
-│                   │  2. Calls chrome.tabs.query() to get active tab
-│                   │  3. Sends message: { type: "EXTRACT_JOB" }
+│  SIDE PANEL       │  Shows: "Not signed in"
+│                   │  Button: "Sign in to Job Copilot"
 └─────────┬─────────┘
-          │
-          │  chrome.tabs.sendMessage(tabId, message)
+          │ User clicks "Sign in"
+          │ chrome.tabs.create()
           ▼
 ┌───────────────────┐
-│  CONTENT SCRIPT   │  4. Receives message
-│                   │  5. Reads DOM, finds job description
-│                   │  6. Cleans text
-│                   │  7. Returns { url, title, jobText, source }
+│   WEB APP         │  1. /login page opens
+│   /login          │  2. "Sign in with Google" button
 └─────────┬─────────┘
+          │ User clicks Google sign in
           │
-          │  sendResponse(jobData)
           ▼
 ┌───────────────────┐
-│    SIDE PANEL     │  8. Receives response
-│                   │  9. Updates state, displays results
+│  GOOGLE OAUTH     │  3. Google consent screen
+└─────────┬─────────┘
+          │ User approves
+          │
+          ▼
+┌───────────────────┐
+│   BACKEND         │  4. POST /auth/google { id_token }
+│                   │  5. Verify token, create user
+│                   │  6. Return JWT + user info
+└─────────┬─────────┘
+          │ JWT returned to web app
+          │
+          ▼
+┌───────────────────┐
+│   WEB APP         │  7. Store JWT in extension storage
+│                   │     chrome.storage.local.set({ jwt })
+│                   │  8. Redirect to /settings
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│   WEB APP         │  9. /settings page
+│   /settings       │  10. Shows: "No resume uploaded"
+│                   │  11. Shows: Default templates
+└─────────┬─────────┘
+          │ User uploads resume
+          │
+          ▼
+┌───────────────────┐
+│   BACKEND         │  12. PUT /resume/master
+│                   │      (with JWT header)
+│                   │  13. Store resume in DB
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│   WEB APP         │  14. Shows: "Resume saved ✓"
+│                   │  15. User can edit templates 
 └───────────────────┘
+          │
+          ▼
+     SETUP COMPLETE
 ```
 
-### Future Flow (With Summarization)
+### Returning User Flow
 
 ```
-User clicks "Extract"
+User opens extension
         │
         ▼
 ┌───────────────────┐
-│    SIDE PANEL     │  1. Get job text from content script
+│  SIDE PANEL       │  1. Checks chrome.storage.local for JWT
+│                   │  2. Validates JWT with backend
 └─────────┬─────────┘
           │
           ▼
 ┌───────────────────┐
-│  CONTENT SCRIPT   │  2. Extract & return job text
+│   BACKEND         │  3. GET /me (with JWT header)
+│                   │  4. Returns user profile
 └─────────┬─────────┘
           │
           ▼
 ┌───────────────────┐
-│    SIDE PANEL     │  3. Send job text to background for summarization
-│                   │     chrome.runtime.sendMessage({ type: "SUMMARIZE", jobText })
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│    BACKGROUND     │  4. Receives summarize request
-│                   │  5. Calls backend API (API key stored here)
-│                   │     fetch("https://api.example.com/summarize")
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│     BACKEND       │  6. Receives job text
-│    (your API)     │  7. Calls LLM (OpenAI/Claude)
-│                   │  8. Returns structured summary
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│    BACKGROUND     │  9. Receives summary, sends to side panel
-└─────────┬─────────┘
-          │
-          │  sendResponse(summary)
-          ▼
-┌───────────────────┐
-│    SIDE PANEL     │  10. Displays structured summary
+│  SIDE PANEL       │  5. Shows: "Signed in as [name]"
+│                   │  6. Shows: Resume status
+│                   │  7. Shows: "Analyze Job" button (Phase 1)
+│                   │  8. Shows: "Open Settings" button
 └───────────────────┘
+          │ User visits job page
+          │ User clicks "Analyze Job"
+          ▼
+    [Phase 1 flow: Extract → Summarize → Display]
+          │
+          │ (Future: Can send to backend with JWT)
+          ▼
+     Job analyzed with user context
 ```
 
-## Tech Stack (Phase 1)
-- TypeScript
-- React (side panel UI)
-- WXT or Plasmo (extension framework)
-- Tailwind CSS (optional, but recommended)
-- Zod (for validating the summary JSON shape)
+### Auth State Management
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                    Extension Startup                          │
+└───────────────────────┬───────────────────────────────────────┘
+                        │
+                        ▼
+              ┌──────────────────┐
+              │ Read JWT from    │
+              │ chrome.storage   │
+              └────────┬─────────┘
+                       │
+           ┌───────────┴───────────┐
+           │ JWT exists?           │
+           └───────────┬───────────┘
+                  Yes  │  No
+       ┌──────────────┴──────────────┐
+       ▼                             ▼
+┌─────────────┐              ┌──────────────┐
+│ Validate    │              │ Show "Sign   │
+│ with Backend│              │ in" state    │
+└──────┬──────┘              └──────────────┘
+       │
+   Valid? │ Invalid/Expired
+       ├─────────────────────┐
+       │                     │
+       ▼                     ▼
+┌─────────────┐       ┌──────────────┐
+│ Show signed │       │ Clear JWT    │
+│ in state    │       │ Show "Sign   │
+└─────────────┘       │ in" state    │
+                      └──────────────┘
+```
+
+---
+
+## Tech Stack 
+
+**Frontend (Web App):**
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+
+**Backend (API):**
+- FastAPI (Python)
+- PostgreSQL
+- SQLAlchemy (ORM)
+- Alembic (migrations)
+- JWT authentication
+- Google OAuth 2.0
+
 
