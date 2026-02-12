@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import settings
+
 app = FastAPI(
     title="Job Copilot API",
     description="Backend API for the Job Copilot browser extension",
@@ -28,7 +30,7 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     """
-    Root endpoint - just returns a welcome message.
+    Root endpoint.
     """
     return {
         "message": "Welcome to Job Copilot API",
@@ -43,5 +45,17 @@ def health_check():
     Health check endpoint.
     """
     return {"status": "ok"}
+
+
+@app.get("/config-check")
+def config_check():
+    """
+    Verify that configuration is loaded correctly.
+    """
+    return {
+        "database_configured": bool(settings.DATABASE_URL),
+        "jwt_expiration_minutes": settings.JWT_EXPIRATION_MINUTES,
+        "google_oauth_configured": bool(settings.GOOGLE_CLIENT_ID),
+    }
 
 
