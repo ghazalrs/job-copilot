@@ -17,7 +17,6 @@ allowed_origins = [
     "chrome-extension://*",       # Chrome extensions
 ]
 
-# Add CORS middleware 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,  
@@ -25,7 +24,6 @@ app.add_middleware(
     allow_methods=["*"],             
     allow_headers=["*"],             
 )
-
 
 @app.get("/")
 def read_root():
@@ -38,14 +36,12 @@ def read_root():
         "version": "0.1.0"
     }
 
-
 @app.get("/health")
 def health_check():
     """
     Health check endpoint.
     """
     return {"status": "ok"}
-
 
 @app.get("/config-check")
 def config_check():
