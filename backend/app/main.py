@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.config import settings
 from app.database import engine, Base
-from app.models import User  
+from app.models import User
+from app.routers import auth  
 
 
 # Create all database tables
@@ -25,11 +25,15 @@ allowed_origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  
-    allow_credentials=True,          
-    allow_methods=["*"],             
-    allow_headers=["*"],             
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# Register routers
+app.include_router(auth.router)
+
 
 @app.get("/")
 def read_root():

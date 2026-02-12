@@ -3,3 +3,7 @@ uvicorn[standard]
 pydantic-settings
 sqlalchemy
 aiosqlite
+python-jose[cryptography]
+google-auth
+requests
+httpx
