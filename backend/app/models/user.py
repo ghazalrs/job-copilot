@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -7,7 +8,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    # Primary key 
+    # Primary key
     id = Column(Integer, primary_key=True, index=True)
 
     # Google's unique identifier for this user
@@ -25,3 +26,9 @@ class User(Base):
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # One user has one resume (one-to-one relationship)
+    resume = relationship("Resume", back_populates="user", uselist=False)
+
+    # One user can have multiple templates (one-to-many relationship)
+    templates = relationship("Template", back_populates="user")
