@@ -6,9 +6,8 @@ class GoogleAuthRequest(BaseModel):
     id_token: str  # The token from Google
 
 class UserResponse(BaseModel):
-    """
-    User info returned to the frontend.
-    """
+     
+    # User info returned to the frontend.
     id: int
     email: str
     name: str | None
