@@ -10,7 +10,6 @@
     "package": "plasmo package"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.13.4",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0"
@@ -35,6 +34,9 @@
     ],
     "side_panel": {
       "default_path": "sidepanel.html"
+    },
+    "content_security_policy": {
+      "extension_pages": "script-src 'self' https://accounts.google.com; object-src 'self'"
     }
   }
 }
