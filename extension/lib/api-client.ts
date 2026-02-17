@@ -37,7 +37,7 @@ function getAuthHeaders(token?: string): HeadersInit {
 }
 
 /**
- * Authenticate with Google ID token
+ * Authenticate with Google ID token (for web app)
  */
 export async function loginWithGoogle(
   idToken: string
@@ -45,6 +45,23 @@ export async function loginWithGoogle(
   const payload: GoogleAuthRequest = { id_token: idToken };
 
   const response = await fetch(`${API_URL}/auth/google`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return handleResponse<AuthResponse>(response);
+}
+
+/**
+ * Authenticate with Google access token (for Chrome extension)
+ */
+export async function loginWithGoogleAccessToken(
+  accessToken: string
+): Promise<AuthResponse> {
+  const payload = { access_token: accessToken };
+
+  const response = await fetch(`${API_URL}/auth/google/access-token`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload),

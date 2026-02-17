@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import { useAuth } from './hooks/useAuth'
 import { useResume } from './hooks/useResume'
 import { SignInView } from './components/SignInView'
@@ -326,13 +325,4 @@ function IndexSidePanel() {
   )
 }
 
-// Wrap in GoogleOAuthProvider
-export default function SidePanelWithAuth() {
-  const clientId = process.env.PLASMO_PUBLIC_GOOGLE_CLIENT_ID || ''
-
-  return (
-    <GoogleOAuthProvider clientId={clientId}>
-      <IndexSidePanel />
-    </GoogleOAuthProvider>
-  )
-}
+export default IndexSidePanel

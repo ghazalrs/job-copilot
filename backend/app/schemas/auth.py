@@ -5,6 +5,12 @@ class GoogleAuthRequest(BaseModel):
 
     id_token: str  # The token from Google
 
+
+class GoogleAccessTokenRequest(BaseModel):
+
+    access_token: str  # The access token from Chrome Identity API
+
+
 class UserResponse(BaseModel):
      
     # User info returned to the frontend.

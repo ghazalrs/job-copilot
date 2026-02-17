@@ -2,8 +2,16 @@ export {}
 
 let geminiApiKey: string | null = null
 
+// Load API key on startup
 chrome.storage.local.get("geminiApiKey").then(res => {
   geminiApiKey = res.geminiApiKey
+})
+
+// Listen for API key changes
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes.geminiApiKey) {
+    geminiApiKey = changes.geminiApiKey.newValue
+  }
 })
 
 // Open side panel when extension icon is clicked

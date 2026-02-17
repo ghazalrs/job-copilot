@@ -30,13 +30,15 @@
     "permissions": [
       "sidePanel",
       "activeTab",
-      "storage"
+      "storage",
+      "identity"
     ],
     "side_panel": {
       "default_path": "sidepanel.html"
     },
-    "content_security_policy": {
-      "extension_pages": "script-src 'self' https://accounts.google.com; object-src 'self'"
+    "oauth2": {
+      "client_id": "121470041380-srsjo6rfeda533ab6b8di93p4la5n1vr.apps.googleusercontent.com",
+      "scopes": ["email", "profile"]
     }
   }
 }
