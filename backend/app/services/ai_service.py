@@ -69,8 +69,7 @@ OUTPUT REQUIREMENTS:
 """
 
     try:
-        # Initialize the model
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-2.5-flash')
 
         # Generate content with JSON response
         response = model.generate_content(
