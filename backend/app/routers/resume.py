@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Resume, User
-from app.schemas.resume import ResumeCreate, ResumeResponse
+from app.schemas.resume import ResumeCreate, ResumeResponse, TailorRequest, TailorResponse
 from app.dependencies import get_current_user
+from app.services import ai_service
 
 router = APIRouter(prefix="/resume", tags=["resume"])
 
@@ -58,7 +59,7 @@ def delete_master_resume(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    
+
     resume = db.query(Resume).filter(Resume.user_id == current_user.id).first()
 
     if not resume:
@@ -71,3 +72,33 @@ def delete_master_resume(
     db.commit()
 
     return None
+
+
+@router.post("/tailor", response_model=TailorResponse)
+async def tailor_resume(
+    request: TailorRequest,
+    current_user: User = Depends(get_current_user)
+):
+    
+    try:
+        # Call the AI service to tailor the resume
+        result = await ai_service.tailor_resume(
+            job_description=request.job_description,
+            master_resume=request.master_resume
+        )
+
+        return result
+
+    except ValueError as e:
+        # JSON parsing error from AI service
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AI service returned invalid response: {str(e)}"
+        )
+
+    except Exception as e:
+        # General error (API failure, network issues, etc.)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to tailor resume: {str(e)}"
+        )
