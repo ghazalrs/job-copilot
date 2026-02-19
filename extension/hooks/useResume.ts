@@ -23,7 +23,11 @@ export function useResume(token: string | null) {
   // Track changes
   useEffect(() => {
     if (resume) {
+      // If resume exists, check if text changed
       setHasChanges(resumeText !== resume.raw_text);
+    } else {
+      // If no resume exists, enable save if there's any text
+      setHasChanges(resumeText.trim().length > 0);
     }
   }, [resumeText, resume]);
 
