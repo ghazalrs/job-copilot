@@ -10,7 +10,6 @@ type JobData = {
   jobText: string
 }
 
-// Add company overview later
 type JobSummary = {
   roleOverview: string
   responsibilities: string[]
@@ -22,6 +21,7 @@ type Status = "idle" | "extracting" | "summarizing" | "done" | "error"
 
 type TailoredResumeResult = {
   tailored_resume: string
+  tailored_resume_latex: string
   changes_made: Array<{ change: string; rationale: string }>
   keywords_matched: string[]
   keywords_missing: string[]
@@ -30,8 +30,10 @@ type TailoredResumeResult = {
 }
 
 type TailorStatus = "idle" | "tailoring" | "done" | "error"
+type ResumeFormat = "plain" | "latex"
 
 function IndexSidePanel() {
+  
   // Auth state
   const { user, token, isAuthenticated, isLoading: authLoading, login, logout } = useAuth()
 
@@ -64,6 +66,7 @@ function IndexSidePanel() {
   const [tailorStatus, setTailorStatus] = useState<TailorStatus>("idle")
   const [tailoredResult, setTailoredResult] = useState<TailoredResumeResult | null>(null)
   const [tailorError, setTailorError] = useState<string>("")
+  const [resumeFormat, setResumeFormat] = useState<ResumeFormat>("plain")
 
   // Load API key on mount
   useEffect(() => {
@@ -128,6 +131,7 @@ function IndexSidePanel() {
     setTailoredResult(null)
 
     try {
+      
       // Get the user's master resume from backend
       const resumeResponse = await fetch('http://localhost:8000/resume/master', {
         method: 'GET',
@@ -464,7 +468,41 @@ function IndexSidePanel() {
 
                     {/* Tailored Resume Text */}
                     <section>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>Tailored Resume:</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <h4 style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>Tailored Resume:</h4>
+                        {/* Format Toggle */}
+                        <div style={{ display: 'flex', gap: 4, backgroundColor: '#e5e7eb', padding: 2, borderRadius: 4 }}>
+                          <button
+                            onClick={() => setResumeFormat('plain')}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: 11,
+                              border: 'none',
+                              borderRadius: 3,
+                              cursor: 'pointer',
+                              backgroundColor: resumeFormat === 'plain' ? 'white' : 'transparent',
+                              color: resumeFormat === 'plain' ? '#10b981' : '#6b7280',
+                              fontWeight: resumeFormat === 'plain' ? 'bold' : 'normal'
+                            }}>
+                            Plain Text
+                          </button>
+                          <button
+                            onClick={() => setResumeFormat('latex')}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: 11,
+                              border: 'none',
+                              borderRadius: 3,
+                              cursor: 'pointer',
+                              backgroundColor: resumeFormat === 'latex' ? 'white' : 'transparent',
+                              color: resumeFormat === 'latex' ? '#10b981' : '#6b7280',
+                              fontWeight: resumeFormat === 'latex' ? 'bold' : 'normal'
+                            }}>
+                            LaTeX
+                          </button>
+                        </div>
+                      </div>
+
                       <pre style={{
                         whiteSpace: 'pre-wrap',
                         fontSize: 12,
@@ -474,24 +512,53 @@ function IndexSidePanel() {
                         padding: 12,
                         borderRadius: 4,
                         border: '1px solid #d1fae5',
-                        lineHeight: 1.6
+                        lineHeight: 1.6,
+                        fontFamily: resumeFormat === 'latex' ? 'monospace' : 'inherit'
                       }}>
-                        {tailoredResult.tailored_resume}
+                        {resumeFormat === 'plain' ? tailoredResult.tailored_resume : tailoredResult.tailored_resume_latex}
                       </pre>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(tailoredResult.tailored_resume)}
-                        style={{
-                          marginTop: 8,
-                          padding: '8px 16px',
-                          backgroundColor: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                          fontSize: 12
-                        }}>
-                        📋 Copy to Clipboard
-                      </button>
+
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button
+                          onClick={() => {
+                            const textToCopy = resumeFormat === 'plain'
+                              ? tailoredResult.tailored_resume
+                              : tailoredResult.tailored_resume_latex
+                            navigator.clipboard.writeText(textToCopy)
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontSize: 12
+                          }}>
+                          📋 Copy {resumeFormat === 'plain' ? 'Plain Text' : 'LaTeX'}
+                        </button>
+
+                        {resumeFormat === 'latex' && (
+                          <button
+                            onClick={() => {
+                              const overleafUrl = `https://www.overleaf.com/docs?snip_uri=${
+                                encodeURIComponent('data:application/x-tex,' + encodeURIComponent(tailoredResult.tailored_resume_latex))
+                              }`
+                              chrome.tabs.create({ url: overleafUrl })
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              fontSize: 12
+                            }}>
+                            📄 Open in Overleaf
+                          </button>
+                        )}
+                      </div>
                     </section>
                   </div>
                 )}
