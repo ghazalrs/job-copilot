@@ -1,194 +1,154 @@
-# Phase 2 
+# Job Copilot
 
-## High-Level Architecture
+> AI-powered Chrome extension for resume tailoring and job analysis
+
+## Overview
+
+Job Copilot helps job seekers optimize their resumes using AI. Extract job descriptions, manage your resume in the cloud, and get AI-powered insights.
+
+**Status:** ✅ Phase 1 & 2 Complete | 🔄 Phase 3 (AI Features) 
+
+---
+
+## Current Features
+
+### Phase 1: Job Analysis ✅
+- Extract job descriptions from any page
+- AI summarization (role, responsibilities, requirements, tech stack)
+- Powered by Gemini API
+
+### Phase 2: Auth & Storage ✅
+- Google OAuth authentication (Chrome Identity API)
+- Cloud resume storage
+- Multi-device sync
+- JWT-based backend (FastAPI + SQLite/PostgreSQL)
+
+---
+
+## Coming Soon: Phase 3
+
+### 1. AI Resume Tailoring
+Customize your resume for each job using AI.
+
+**Endpoint:** `POST /resume/tailor`
+- Input: job description + master resume
+- Output: tailored resume with highlighted changes
+
+### 2. Resume Match Scoring
+Get a match percentage with improvement suggestions.
+
+**Endpoint:** `POST /resume/score`
+- Score: 0-100%
+- Strengths/weaknesses
+- Missing keywords
+- Specific suggestions
+
+### 3. RAG Chatbot
+Ask questions about your resume and get personalized advice.
+
+**Endpoint:** `POST /chat`
+- Context-aware responses
+- Powered by vector DB + LangChain
+- Conversation history
+
+---
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         PHASE 2 SYSTEM                                      │
-│                                                                             │
-│  ┌──────────────────┐         ┌──────────────────┐         ┌─────────────┐  │
-│  │    WEB APP       │         │  FASTAPI BACKEND │         │   DATABASE  │  │
-│  │   (React SPA)    │         │                  │         │  (Postgres) │  │
-│  │                  │         │                  │         │             │  │
-│  │ • Google Login   │◄────────│ • Auth (JWT)     │◄────────│ • Users     │  │
-│  │ • Resume Upload  │   HTTPS │ • Store Resume   │         │ • Resumes   │  │
-│  │ • Edit Templates │         │ • Serve Templates│         │ • Templates │  │
-│  └──────────────────┘         └──────────────────┘         └─────────────┘  │
-│           │                            ▲                                    │
-│           │ Opens /login               │ API Calls                          │
-│           │ Opens /settings            │ (with JWT)                         │
-│           ▼                            │                                    │
-│  ┌──────────────────────────────────────────────────┐                       │
-│  │         BROWSER EXTENSION                        │                       │
-│  │                                                  │                       │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐  │                       │
-│  │  │ Side Panel │  │ Background │  │  Content   │  │                       │
-│  │  │            │  │            │  │  Script    │  │                       │
-│  │  │ • Shows    │  │ • Stores   │  │            │  │                       │
-│  │  │   Auth     │  │   JWT      │  │ • Extracts │  │                       │
-│  │  │   Status   │  │ • Calls    │  │   Job Text │  │                       │ 
-│  │  │ • Settings │  │   Backend  │  │            │  │                       │
-│  │  │   Button   │  │   API      │  │            │  │                       │
-│  │  └────────────┘  └────────────┘  └────────────┘  │                       │
-│  └──────────────────────────────────────────────────┘                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────┐
+│   CHROME EXTENSION               │
+│   • Side Panel UI (React)        │
+│   • Job Extraction               │
+│   • Auth & Resume Management     │
+└────────────┬─────────────────────┘
+             │ HTTPS + JWT
+┌────────────▼─────────────────────┐
+│   FASTAPI BACKEND                │
+│   • Google OAuth                 │
+│   • Resume CRUD                  │
+│   • AI Processing (Phase 3)      │
+└────────────┬─────────────────────┘
+             │
+┌────────────▼─────────────────────┐
+│   DATABASE                       │
+│   • Users                        │
+│   • Resumes                      │
+└──────────────────────────────────┘
 ```
 
 ---
 
-## User Flow (Phase 2)
+## Tech Stack
 
-### First-time User Flow
+- **Extension:** Plasmo, React, TypeScript, Chrome APIs
+- **Backend:** FastAPI, SQLAlchemy, PostgreSQL, JWT
 
-```
-User opens extension
-        │
-        ▼
-┌───────────────────┐
-│  SIDE PANEL       │  Shows: "Not signed in"
-│                   │  Button: "Sign in to Job Copilot"
-└─────────┬─────────┘
-          │ User clicks "Sign in"
-          │ chrome.tabs.create()
-          ▼
-┌───────────────────┐
-│   WEB APP         │  1. /login page opens
-│   /login          │  2. "Sign in with Google" button
-└─────────┬─────────┘
-          │ User clicks Google sign in
-          │
-          ▼
-┌───────────────────┐
-│  GOOGLE OAUTH     │  3. Google consent screen
-└─────────┬─────────┘
-          │ User approves
-          │
-          ▼
-┌───────────────────┐
-│   BACKEND         │  4. POST /auth/google { id_token }
-│                   │  5. Verify token, create user
-│                   │  6. Return JWT + user info
-└─────────┬─────────┘
-          │ JWT returned to web app
-          │
-          ▼
-┌───────────────────┐
-│   WEB APP         │  7. Store JWT in extension storage
-│                   │     chrome.storage.local.set({ jwt })
-│                   │  8. Redirect to /settings
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│   WEB APP         │  9. /settings page
-│   /settings       │  10. Shows: "No resume uploaded"
-│                   │  11. Shows: Default templates
-└─────────┬─────────┘
-          │ User uploads resume
-          │
-          ▼
-┌───────────────────┐
-│   BACKEND         │  12. PUT /resume/master
-│                   │      (with JWT header)
-│                   │  13. Store resume in DB
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│   WEB APP         │  14. Shows: "Resume saved ✓"
-│                   │  15. User can edit templates 
-└───────────────────┘
-          │
-          ▼
-     SETUP COMPLETE
+---
+
+## Setup
+
+### Backend
+```bash
+cd backend
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # Add your credentials
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-### Returning User Flow
-
-```
-User opens extension
-        │
-        ▼
-┌───────────────────┐
-│  SIDE PANEL       │  1. Checks chrome.storage.local for JWT
-│                   │  2. Validates JWT with backend
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│   BACKEND         │  3. GET /me (with JWT header)
-│                   │  4. Returns user profile
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│  SIDE PANEL       │  5. Shows: "Signed in as [name]"
-│                   │  6. Shows: Resume status
-│                   │  7. Shows: "Analyze Job" button (Phase 1)
-│                   │  8. Shows: "Open Settings" button
-└───────────────────┘
-          │ User visits job page
-          │ User clicks "Analyze Job"
-          ▼
-    [Phase 1 flow: Extract → Summarize → Display]
-          │
-          │ (Future: Can send to backend with JWT)
-          ▼
-     Job analyzed with user context
+### Extension
+```bash
+cd extension
+npm install
+cp .env.example .env  # Add API URL and Google Client ID
+npm run dev
 ```
 
-### Auth State Management
+### Load Extension
+1. Chrome → `chrome://extensions/`
+2. Enable "Developer mode"
+3. "Load unpacked" → `extension/build/chrome-mv3-dev`
+
+---
+
+## Project Structure
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                    Extension Startup                          │
-└───────────────────────┬───────────────────────────────────────┘
-                        │
-                        ▼
-              ┌──────────────────┐
-              │ Read JWT from    │
-              │ chrome.storage   │
-              └────────┬─────────┘
-                       │
-           ┌───────────┴───────────┐
-           │ JWT exists?           │
-           └───────────┬───────────┘
-                  Yes  │  No
-       ┌──────────────┴──────────────┐
-       ▼                             ▼
-┌─────────────┐              ┌──────────────┐
-│ Validate    │              │ Show "Sign   │
-│ with Backend│              │ in" state    │
-└──────┬──────┘              └──────────────┘
-       │
-   Valid? │ Invalid/Expired
-       ├─────────────────────┐
-       │                     │
-       ▼                     ▼
-┌─────────────┐       ┌──────────────┐
-│ Show signed │       │ Clear JWT    │
-│ in state    │       │ Show "Sign   │
-└─────────────┘       │ in" state    │
-                      └──────────────┘
+job-copilot/
+├── extension/          # Chrome extension (Plasmo + React)
+│   ├── components/     # SignInView, ResumeTab
+│   ├── hooks/          # useAuth, useResume
+│   ├── lib/            # API client
+│   ├── background.ts   # Service worker
+│   └── sidepanel.tsx   # Main UI
+├── backend/            # FastAPI backend
+│   ├── app/
+│   │   ├── models/     # SQLAlchemy models
+│   │   ├── routers/    # API endpoints
+│   │   ├── schemas/    # Pydantic schemas
+│   │   └── services/   # Business logic
+│   └── alembic/        # Migrations
+└── README.md
 ```
 
 ---
 
-## Tech Stack 
+## API Endpoints
 
-**Frontend (Web App):**
-- React + TypeScript
-- Vite
-- Tailwind CSS
-- React Router
+**Current:**
+- `POST /auth/google` - OAuth login
+- `POST /auth/google/access-token` - Chrome extension auth
+- `GET/PUT/DELETE /resume/master` - Resume CRUD
 
-**Backend (API):**
-- FastAPI (Python)
-- PostgreSQL
-- SQLAlchemy (ORM)
-- Alembic (migrations)
-- JWT authentication
-- Google OAuth 2.0
+**Phase 3:**
+- `POST /resume/tailor` - AI resume tailoring
+- `POST /resume/score` - Match scoring
+- `POST /chat` - RAG chatbot
 
+---
 
+## License
+
+MIT
