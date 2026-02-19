@@ -20,6 +20,17 @@ type JobSummary = {
 
 type Status = "idle" | "extracting" | "summarizing" | "done" | "error"
 
+type TailoredResumeResult = {
+  tailored_resume: string
+  changes_made: Array<{ change: string; rationale: string }>
+  keywords_matched: string[]
+  keywords_missing: string[]
+  keyword_variants_used: string[]
+  clarifying_questions: string[]
+}
+
+type TailorStatus = "idle" | "tailoring" | "done" | "error"
+
 function IndexSidePanel() {
   // Auth state
   const { user, token, isAuthenticated, isLoading: authLoading, login, logout } = useAuth()
@@ -41,13 +52,18 @@ function IndexSidePanel() {
   // Tab state
   const [activeTab, setActiveTab] = useState<'resume' | 'job'>('job')
 
-  // Job analysis state (existing)
+  // Job analysis state
   const [jobData, setJobData] = useState<JobData | null>(null)
   const [summary, setSummary] = useState<JobSummary | null>(null)
   const [status, setStatus] = useState<Status>("idle")
   const [error, setError] = useState<string>("")
   const [apiKey, setApiKey] = useState<string>("")
   const [showSettings, setShowSettings] = useState(false)
+
+  // Resume tailoring state
+  const [tailorStatus, setTailorStatus] = useState<TailorStatus>("idle")
+  const [tailoredResult, setTailoredResult] = useState<TailoredResumeResult | null>(null)
+  const [tailorError, setTailorError] = useState<string>("")
 
   // Load API key on mount
   useEffect(() => {
@@ -67,14 +83,14 @@ function IndexSidePanel() {
     setSummary(null)
 
     try {
-      // Step 1: Extract job text
+      // Extract job text
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
       if (!tab.id) throw new Error("No active tab found")
 
       const extractedData = await chrome.tabs.sendMessage(tab.id, { type: "EXTRACT_JOB" })
       setJobData(extractedData)
 
-      // Step 2: Summarize
+      // Summarize
       setStatus("summarizing")
       const response = await chrome.runtime.sendMessage({
         type: "SUMMARIZE",
@@ -98,6 +114,62 @@ function IndexSidePanel() {
       case "extracting": return "Extracting..."
       case "summarizing": return "Summarizing..."
       default: return "Analyze Job"
+    }
+  }
+
+  const tailorResume = async () => {
+    if (!jobData || !token) {
+      setTailorError("Missing job data or authentication")
+      return
+    }
+
+    setTailorStatus("tailoring")
+    setTailorError("")
+    setTailoredResult(null)
+
+    try {
+      // Get the user's master resume from backend
+      const resumeResponse = await fetch('http://localhost:8000/resume/master', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!resumeResponse.ok) {
+        if (resumeResponse.status === 404) {
+          throw new Error("Please upload your resume in the Resume tab first")
+        }
+        throw new Error("Failed to fetch your resume")
+      }
+
+      const resumeData = await resumeResponse.json()
+
+      // Call the tailor endpoint
+      const tailorResponse = await fetch('http://localhost:8000/resume/tailor', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          job_description: jobData.jobText,
+          master_resume: resumeData.raw_text
+        })
+      })
+
+      if (!tailorResponse.ok) {
+        const errorData = await tailorResponse.json()
+        throw new Error(errorData.detail || "Failed to tailor resume")
+      }
+
+      const result = await tailorResponse.json()
+      setTailoredResult(result)
+      setTailorStatus("done")
+    } catch (err) {
+      setTailorError(err instanceof Error ? err.message : "Failed to tailor resume")
+      setTailorStatus("error")
     }
   }
 
@@ -153,7 +225,7 @@ function IndexSidePanel() {
         </div>
       </div>
 
-      {/* Settings panel (existing Gemini API key) */}
+      {/* Settings panel */}
       {showSettings && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, backgroundColor: '#f3f4f6', margin: 16, borderRadius: 6 }}>
           <label style={{ fontSize: 12, fontWeight: 'bold' }}>Gemini API Key</label>
@@ -315,6 +387,113 @@ function IndexSidePanel() {
                       {jobData.jobText}
                     </pre>
                   </details>
+                )}
+
+                {/* Tailor Resume Button */}
+                <button
+                  onClick={tailorResume}
+                  disabled={tailorStatus === 'tailoring'}
+                  style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: tailorStatus === 'tailoring' ? 'wait' : 'pointer',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    marginTop: 16
+                  }}>
+                  {tailorStatus === 'tailoring' ? '✨ Tailoring Resume...' : '✨ Tailor My Resume'}
+                </button>
+
+                {/* Tailor Error */}
+                {tailorError && (
+                  <div style={{ color: '#ef4444', padding: 12, backgroundColor: '#fef2f2', borderRadius: 6, fontSize: 14 }}>
+                    {tailorError}
+                  </div>
+                )}
+
+                {/* Tailored Resume Results */}
+                {tailoredResult && tailorStatus === 'done' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16, padding: 16, backgroundColor: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                    <h3 style={{ margin: 0, fontSize: 16, color: '#15803d' }}>✨ Tailored Resume</h3>
+
+                    {/* Changes Made */}
+                    <section>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>Changes Made:</h4>
+                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        {tailoredResult.changes_made.map((item, i) => (
+                          <li key={i} style={{ marginBottom: 8 }}>
+                            <strong>{item.change}</strong>
+                            <p style={{ margin: '4px 0 0 0', fontSize: 12, color: '#6b7280' }}>{item.rationale}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+
+                    {/* Keywords Matched */}
+                    <section>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>
+                        ✅ Keywords Matched ({tailoredResult.keywords_matched.length}):
+                      </h4>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {tailoredResult.keywords_matched.map((keyword, i) => (
+                          <span key={i} style={{ padding: '4px 10px', backgroundColor: '#d1fae5', color: '#065f46', borderRadius: 12, fontSize: 12 }}>
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
+                    </section>
+
+                    {/* Keywords Missing */}
+                    {tailoredResult.keywords_missing.length > 0 && (
+                      <section>
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>
+                          ⚠️ Keywords Missing ({tailoredResult.keywords_missing.length}):
+                        </h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {tailoredResult.keywords_missing.map((keyword, i) => (
+                            <span key={i} style={{ padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: 12, fontSize: 12 }}>
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Tailored Resume Text */}
+                    <section>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>Tailored Resume:</h4>
+                      <pre style={{
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 12,
+                        maxHeight: 400,
+                        overflow: 'auto',
+                        backgroundColor: 'white',
+                        padding: 12,
+                        borderRadius: 4,
+                        border: '1px solid #d1fae5',
+                        lineHeight: 1.6
+                      }}>
+                        {tailoredResult.tailored_resume}
+                      </pre>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(tailoredResult.tailored_resume)}
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 16px',
+                          backgroundColor: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          fontSize: 12
+                        }}>
+                        📋 Copy to Clipboard
+                      </button>
+                    </section>
+                  </div>
                 )}
               </div>
             )}
