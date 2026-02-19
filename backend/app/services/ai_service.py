@@ -61,10 +61,14 @@ Return your response as a JSON object with this exact structure:
 
 OUTPUT REQUIREMENTS:
 - "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
-- "tailored_resume_latex": Full resume in LaTeX format with proper document structure (\\documentclass, \\begin{{document}}, sections, etc.)
-  * Use clean, professional LaTeX syntax
-  * Include proper commands: \\section{{}}, \\textbf{{}}, \\textit{{}}, \\item, etc.
-  * Make it compilable and ready for Overleaf
+- "tailored_resume_latex": Full resume in LaTeX format with proper document structure
+  * CRITICAL: In JSON, backslash is an escape character. You MUST double all backslashes
+  * Example: To output \\section in JSON, write "\\\\section"
+  * Example: To output \\textbf in JSON, write "\\\\textbf"
+  * Example: To output \\begin{{document}} in JSON, write "\\\\begin{{document}}"
+  * Use clean, professional LaTeX syntax with doubled backslashes
+  * Include proper commands: \\\\section{{}}, \\\\textbf{{}}, \\\\textit{{}}, \\\\item, etc.
+  * Make it compilable and ready for Overleaf (after backslashes are processed)
   * If input was plain text, generate appropriate LaTeX structure
   * If input was LaTeX, preserve and enhance the structure
 - "changes_made": 3-5 specific changes with rationale for each
@@ -72,7 +76,7 @@ OUTPUT REQUIREMENTS:
 - "keywords_missing": Important keywords the candidate genuinely lacks (be honest)
 - "keyword_variants_used": Any terminology translations applied (e.g., "Software Developer → Software Engineer")
 - "clarifying_questions": 1-3 questions about experiences that could strengthen the resume if clarified
-- Ensure valid JSON format with properly escaped LaTeX backslashes (use \\\\ for \\)
+- CRITICAL: Ensure valid JSON format. Remember that in JSON strings, backslash must be doubled
 """
 
     try:
@@ -96,8 +100,11 @@ OUTPUT REQUIREMENTS:
         return result
 
     except json.JSONDecodeError as e:
+        # Log the error for debugging
+        print(f"JSON Parse Error: {str(e)}")
+        print(f"Response preview: {response.text[:500]}...")
         # Fallback if JSON parsing fails
-        raise ValueError(f"Failed to parse AI response as JSON: {str(e)}")
+        raise ValueError(f"Failed to parse AI response as JSON: {str(e)}. The AI may not have properly escaped LaTeX backslashes.")
 
     except Exception as e:
         # Handle other errors
