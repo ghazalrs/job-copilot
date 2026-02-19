@@ -39,7 +39,8 @@ class ChangeDetail(BaseModel):
 
 
 class TailorResponse(BaseModel):
-    tailored_resume: str
+    tailored_resume: str  # Plain text version (for preview)
+    tailored_resume_latex: str  # LaTeX version (for Overleaf)
     changes_made: List[ChangeDetail]
     keywords_matched: List[str]
     keywords_missing: List[str]

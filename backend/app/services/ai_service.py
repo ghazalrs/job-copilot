@@ -45,7 +45,8 @@ TAILORING PROCESS:
 
 Return your response as a JSON object with this exact structure:
 {{
-  "tailored_resume": "The complete tailored resume text, ready to use",
+  "tailored_resume": "The complete tailored resume in PLAIN TEXT format, ready to use",
+  "tailored_resume_latex": "The complete tailored resume in LaTeX format, compilable and ready for Overleaf",
   "changes_made": [
     {{
       "change": "Description of the specific change",
@@ -59,26 +60,32 @@ Return your response as a JSON object with this exact structure:
 }}
 
 OUTPUT REQUIREMENTS:
-- "tailored_resume": Full resume text preserving original formatting structure
+- "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
+- "tailored_resume_latex": Full resume in LaTeX format with proper document structure (\\documentclass, \\begin{{document}}, sections, etc.)
+  * Use clean, professional LaTeX syntax
+  * Include proper commands: \\section{{}}, \\textbf{{}}, \\textit{{}}, \\item, etc.
+  * Make it compilable and ready for Overleaf
+  * If input was plain text, generate appropriate LaTeX structure
+  * If input was LaTeX, preserve and enhance the structure
 - "changes_made": 3-5 specific changes with rationale for each
 - "keywords_matched": Top 5-10 job keywords successfully incorporated
 - "keywords_missing": Important keywords the candidate genuinely lacks (be honest)
 - "keyword_variants_used": Any terminology translations applied (e.g., "Software Developer → Software Engineer")
 - "clarifying_questions": 1-3 questions about experiences that could strengthen the resume if clarified
-- Ensure valid JSON format
+- Ensure valid JSON format with properly escaped LaTeX backslashes (use \\\\ for \\)
 """
 
     try:
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
 
         # Generate content with JSON response
         response = model.generate_content(
             prompt,
             generation_config={
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 8192,
+                "temperature": 0.4,  
+                "top_p": 0.9,        
+                "top_k": 20,         
+                "max_output_tokens": 4096,  
                 "response_mime_type": "application/json",
             }
         )
