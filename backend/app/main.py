@@ -4,7 +4,8 @@ from app.config import settings
 from app.database import engine, Base
 from app.models import User, Resume, Template
 from app.routers import auth
-from app.routers import resume  
+from app.routers import resume
+from app.routers import template 
 
 
 # Create all database tables
@@ -35,6 +36,7 @@ app.add_middleware(
 # Register routers
 app.include_router(auth.router)
 app.include_router(resume.router)
+app.include_router(template.router)
 
 
 @app.get("/")

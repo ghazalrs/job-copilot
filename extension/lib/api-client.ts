@@ -4,6 +4,7 @@ import type {
   Resume,
   ResumeCreate,
   ApiError,
+  TemplateResponse,
 } from '../types';
 
 const API_URL = process.env.PLASMO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -115,4 +116,16 @@ export async function deleteMasterResume(token: string): Promise<void> {
     }));
     throw new Error(error.detail);
   }
+}
+
+/**
+ * Get the default LaTeX resume template
+ */
+export async function getResumeTemplate(): Promise<TemplateResponse> {
+  const response = await fetch(`${API_URL}/template/resume`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+
+  return handleResponse<TemplateResponse>(response);
 }

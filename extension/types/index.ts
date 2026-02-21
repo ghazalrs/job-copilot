@@ -47,6 +47,11 @@ export interface TemplateCreate {
   content: string;
 }
 
+export interface TemplateResponse {
+  template_type: string;
+  content: string;
+}
+
 // API Error type
 export interface ApiError {
   detail: string;
