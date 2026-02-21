@@ -87,9 +87,9 @@ Every single backslash in LaTeX must be doubled in your JSON output!
 OUTPUT REQUIREMENTS:
 - "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
 - "tailored_resume_latex": Full resume in LaTeX format using the PROVIDED TEMPLATE
-  * Use the exact LaTeX template structure provided above
-  * Replace the sample content with the user's tailored resume content
-  * Keep all \\\\documentclass, \\\\usepackage, custom commands
+  * CRITICAL: Copy the LaTeX PREAMBLE (everything from \\\\documentclass to \\\\begin{{document}}) EXACTLY as provided - do NOT modify any \\\\newcommand definitions, \\\\usepackage statements, or formatting commands
+  * Only modify the CONTENT sections: heading (name, contact), education entries, experience entries, project entries, and skills
+  * The preamble includes custom commands like \\\\resumeItem, \\\\resumeSubheading - use these EXACTLY as defined, do not change their definitions
   * DOUBLE ALL BACKSLASHES for valid JSON
 - "changes_made": 3-5 specific changes with rationale for each
 - "keywords_matched": Top 5-10 job keywords successfully incorporated
