@@ -70,17 +70,25 @@ Return your response as a JSON object with this exact structure:
   "clarifying_questions": ["Question about potential experience not clearly stated in resume"]
 }}
 
-CRITICAL JSON ESCAPING RULES (READ CAREFULLY):
-In JSON strings, the backslash character is an escape character. To include a literal backslash in your JSON output, you MUST write TWO backslashes (\\\\).
+CRITICAL LATEX SPECIAL CHARACTERS:
+In LaTeX, these characters are special and must be escaped in TEXT content (not in commands):
+- Underscore: _ must be written as \\_  (e.g., "black\\_box" not "black_box")
+- Ampersand: & must be written as \\& (e.g., "Texas A\\&M")
+- Percent: % must be written as \\%
+- Hash: # must be written as \\#
+- Dollar: $ must be written as \\$ (unless used for math mode separators like $|$)
 
-Examples of CORRECT escaping for LaTeX in JSON:
+CRITICAL JSON ESCAPING RULES (READ CAREFULLY):
+In JSON strings, the backslash character is an escape character. To include a literal backslash in your JSON output, you MUST write FOUR backslashes for LaTeX escapes.
+
+Examples of CORRECT escaping for LaTeX special chars in JSON:
+- underscore in text: black_box becomes "black\\\\_box" in JSON
+- ampersand in text: Texas A&M becomes "Texas A\\\\&M" in JSON
+
+Examples of CORRECT escaping for LaTeX commands in JSON:
 - \\section{{Education}} becomes "\\\\section{{Education}}"
 - \\textbf{{Name}} becomes "\\\\textbf{{Name}}"
-- \\begin{{document}} becomes "\\\\begin{{document}}"
-- \\end{{document}} becomes "\\\\end{{document}}"
 - \\resumeItem{{text}} becomes "\\\\resumeItem{{text}}"
-- \\href{{url}}{{text}} becomes "\\\\href{{url}}{{text}}"
-- Texas A\\&M becomes "Texas A\\\\&M"
 
 Every single backslash in LaTeX must be doubled in your JSON output!
 
