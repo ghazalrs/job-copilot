@@ -218,5 +218,4 @@ DEFAULT_RESUME_TEMPLATE = r"""
 
 %-------------------------------------------
 \end{document}
-
 """

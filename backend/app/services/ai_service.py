@@ -1,15 +1,23 @@
 import json
 import google.generativeai as genai
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from app.config import settings
+from app.services.default_templates import DEFAULT_RESUME_TEMPLATE
 
 
 # Configure Gemini API
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
-async def tailor_resume(job_description: str, master_resume: str) -> Dict[str, Any]:
-    
+async def tailor_resume(
+    job_description: str,
+    master_resume: str,
+    latex_template: Optional[str] = None
+) -> Dict[str, Any]:
+
+    # Use default template if none provided
+    template = latex_template or DEFAULT_RESUME_TEMPLATE
+
     # Use techniques from the ChatGPT Job Search Playbook
     prompt = f"""You are an expert resume strategist. Your task is to tailor a resume for a specific job posting while preserving the candidate's authentic voice and ensuring all claims remain verifiable.
 
@@ -18,6 +26,9 @@ JOB DESCRIPTION:
 
 MASTER RESUME:
 {master_resume}
+
+LATEX TEMPLATE (use this exact structure and formatting for the LaTeX output):
+{template}
 
 TAILORING PROCESS:
 
@@ -61,16 +72,16 @@ Return your response as a JSON object with this exact structure:
 
 OUTPUT REQUIREMENTS:
 - "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
-- "tailored_resume_latex": Full resume in LaTeX format with proper document structure
+- "tailored_resume_latex": Full resume in LaTeX format using the PROVIDED TEMPLATE
+  * CRITICAL: You MUST use the exact LaTeX template structure provided above
+  * Replace the sample content in the template with the user's tailored resume content
+  * Keep all the \\documentclass, \\usepackage, custom commands (\\resumeItem, \\resumeSubheading, etc.)
+  * Keep the same section order and formatting from the template
   * CRITICAL: In JSON, backslash is an escape character. You MUST double all backslashes
   * Example: To output \\section in JSON, write "\\\\section"
   * Example: To output \\textbf in JSON, write "\\\\textbf"
   * Example: To output \\begin{{document}} in JSON, write "\\\\begin{{document}}"
-  * Use clean, professional LaTeX syntax with doubled backslashes
-  * Include proper commands: \\\\section{{}}, \\\\textbf{{}}, \\\\textit{{}}, \\\\item, etc.
   * Make it compilable and ready for Overleaf (after backslashes are processed)
-  * If input was plain text, generate appropriate LaTeX structure
-  * If input was LaTeX, preserve and enhance the structure
 - "changes_made": 3-5 specific changes with rationale for each
 - "keywords_matched": Top 5-10 job keywords successfully incorporated
 - "keywords_missing": Important keywords the candidate genuinely lacks (be honest)
