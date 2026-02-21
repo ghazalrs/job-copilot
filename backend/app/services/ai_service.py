@@ -70,24 +70,32 @@ Return your response as a JSON object with this exact structure:
   "clarifying_questions": ["Question about potential experience not clearly stated in resume"]
 }}
 
+CRITICAL JSON ESCAPING RULES (READ CAREFULLY):
+In JSON strings, the backslash character is an escape character. To include a literal backslash in your JSON output, you MUST write TWO backslashes (\\\\).
+
+Examples of CORRECT escaping for LaTeX in JSON:
+- \\section{{Education}} becomes "\\\\section{{Education}}"
+- \\textbf{{Name}} becomes "\\\\textbf{{Name}}"
+- \\begin{{document}} becomes "\\\\begin{{document}}"
+- \\end{{document}} becomes "\\\\end{{document}}"
+- \\resumeItem{{text}} becomes "\\\\resumeItem{{text}}"
+- \\href{{url}}{{text}} becomes "\\\\href{{url}}{{text}}"
+- Texas A\\&M becomes "Texas A\\\\&M"
+
+Every single backslash in LaTeX must be doubled in your JSON output!
+
 OUTPUT REQUIREMENTS:
 - "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
 - "tailored_resume_latex": Full resume in LaTeX format using the PROVIDED TEMPLATE
-  * CRITICAL: You MUST use the exact LaTeX template structure provided above
-  * Replace the sample content in the template with the user's tailored resume content
-  * Keep all the \\documentclass, \\usepackage, custom commands (\\resumeItem, \\resumeSubheading, etc.)
-  * Keep the same section order and formatting from the template
-  * CRITICAL: In JSON, backslash is an escape character. You MUST double all backslashes
-  * Example: To output \\section in JSON, write "\\\\section"
-  * Example: To output \\textbf in JSON, write "\\\\textbf"
-  * Example: To output \\begin{{document}} in JSON, write "\\\\begin{{document}}"
-  * Make it compilable and ready for Overleaf (after backslashes are processed)
+  * Use the exact LaTeX template structure provided above
+  * Replace the sample content with the user's tailored resume content
+  * Keep all \\\\documentclass, \\\\usepackage, custom commands
+  * DOUBLE ALL BACKSLASHES for valid JSON
 - "changes_made": 3-5 specific changes with rationale for each
 - "keywords_matched": Top 5-10 job keywords successfully incorporated
-- "keywords_missing": Important keywords the candidate genuinely lacks (be honest)
-- "keyword_variants_used": Any terminology translations applied (e.g., "Software Developer → Software Engineer")
-- "clarifying_questions": 1-3 questions about experiences that could strengthen the resume if clarified
-- CRITICAL: Ensure valid JSON format. Remember that in JSON strings, backslash must be doubled
+- "keywords_missing": Important keywords the candidate genuinely lacks
+- "keyword_variants_used": Any terminology translations applied
+- "clarifying_questions": 1-3 questions about experiences that could strengthen the resume
 """
 
     try:
@@ -97,10 +105,10 @@ OUTPUT REQUIREMENTS:
         response = model.generate_content(
             prompt,
             generation_config={
-                "temperature": 0.4,  
-                "top_p": 0.9,        
-                "top_k": 20,         
-                "max_output_tokens": 4096,  
+                "temperature": 0.4,
+                "top_p": 0.9,
+                "top_k": 20,
+                "max_output_tokens": 8192,
                 "response_mime_type": "application/json",
             }
         )

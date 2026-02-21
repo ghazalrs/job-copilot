@@ -57,15 +57,5 @@ def health_check():
     """
     return {"status": "ok"}
 
-@app.get("/config-check")
-def config_check():
-    """
-    Verify that configuration is loaded correctly.
-    """
-    return {
-        "database_configured": bool(settings.DATABASE_URL),
-        "jwt_expiration_minutes": settings.JWT_EXPIRATION_MINUTES,
-        "google_oauth_configured": bool(settings.GOOGLE_CLIENT_ID),
-    }
 
 
