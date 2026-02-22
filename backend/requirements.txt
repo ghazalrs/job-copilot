@@ -8,3 +8,4 @@ google-auth
 requests
 httpx
 google-generativeai
+jinja2

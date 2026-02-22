@@ -1,8 +1,8 @@
 import json
 import google.generativeai as genai
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from app.config import settings
-from app.services.default_templates import DEFAULT_RESUME_TEMPLATE
+from app.services.latex_renderer import render_latex, parse_resume_data
 
 
 # Configure Gemini API
@@ -11,14 +11,9 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 
 async def tailor_resume(
     job_description: str,
-    master_resume: str,
-    latex_template: Optional[str] = None
+    master_resume: str
 ) -> Dict[str, Any]:
 
-    # Use default template if none provided
-    template = latex_template or DEFAULT_RESUME_TEMPLATE
-
-    # Use techniques from the ChatGPT Job Search Playbook
     prompt = f"""You are an expert resume strategist. Your task is to tailor a resume for a specific job posting while preserving the candidate's authentic voice and ensuring all claims remain verifiable.
 
 JOB DESCRIPTION:
@@ -26,9 +21,6 @@ JOB DESCRIPTION:
 
 MASTER RESUME:
 {master_resume}
-
-LATEX TEMPLATE (use this exact structure and formatting for the LaTeX output):
-{template}
 
 TAILORING PROCESS:
 
@@ -54,10 +46,56 @@ TAILORING PROCESS:
    - Every claim must be testable and defensible in an interview
    - If a required skill is missing, note it—do NOT fabricate it
 
-Return your response as a JSON object with this exact structure:
+Return your response as a JSON object with this EXACT structure:
 {{
-  "tailored_resume": "The complete tailored resume in PLAIN TEXT format, ready to use",
-  "tailored_resume_latex": "The complete tailored resume in LaTeX format, compilable and ready for Overleaf",
+  "tailored_resume": "The complete tailored resume in PLAIN TEXT format",
+  "resume_data": {{
+    "contact": {{
+      "name": "Candidate's full name from the master resume",
+      "phone": "Phone number or null",
+      "email": "Email address or null",
+      "linkedin": "linkedin.com/in/username (without https://) or null",
+      "github": "github.com/username (without https://) or null"
+    }},
+    "education": [
+      {{
+        "school": "University Name",
+        "location": "City, State/Province",
+        "degree": "Degree name (e.g., Bachelor of Computer Engineering)",
+        "dates": "Start -- End (e.g., Sep. 2024 -- Jun. 2028)"
+      }}
+    ],
+    "experience": [
+      {{
+        "company": "Company Name (Department/Team if applicable)",
+        "location": "City, State/Province",
+        "title": "Job Title",
+        "dates": "Start -- End (e.g., Sep. 2025 -- Present)",
+        "bullets": [
+          "First bullet point - most relevant to job",
+          "Second bullet point",
+          "Third bullet point",
+          "Fourth bullet point (include 4-6 bullets per experience)"
+        ]
+      }}
+    ],
+    "projects": [
+      {{
+        "name": "Project Name",
+        "technologies": "Tech1, Tech2, Tech3",
+        "bullets": [
+          "First bullet point about the project",
+          "Second bullet point",
+          "Third bullet point (include 3-4 bullets per project)"
+        ]
+      }}
+    ],
+    "skills": {{
+      "languages": "Java, Python, JavaScript, TypeScript, etc.",
+      "frameworks": "React, FastAPI, Flask, Node.js, etc.",
+      "tools": "Git, Docker, AWS, etc."
+    }}
+  }},
   "changes_made": [
     {{
       "change": "Description of the specific change",
@@ -66,39 +104,24 @@ Return your response as a JSON object with this exact structure:
   ],
   "keywords_matched": ["keyword1", "keyword2", "keyword3"],
   "keywords_missing": ["missing1", "missing2"],
-  "keyword_variants_used": ["original term → job posting term"],
+  "keyword_variants_used": ["original term -> job posting term"],
   "clarifying_questions": ["Question about potential experience not clearly stated in resume"]
 }}
 
-CRITICAL LATEX SPECIAL CHARACTERS:
-In LaTeX, these characters are special and must be escaped in TEXT content (not in commands):
-- Underscore: _ must be written as \\_  (e.g., "black\\_box" not "black_box")
-- Ampersand: & must be written as \\& (e.g., "Texas A\\&M")
-- Percent: % must be written as \\%
-- Hash: # must be written as \\#
-- Dollar: $ must be written as \\$ (unless used for math mode separators like $|$)
-
-CRITICAL JSON ESCAPING RULES (READ CAREFULLY):
-In JSON strings, the backslash character is an escape character. To include a literal backslash in your JSON output, you MUST write FOUR backslashes for LaTeX escapes.
-
-Examples of CORRECT escaping for LaTeX special chars in JSON:
-- underscore in text: black_box becomes "black\\\\_box" in JSON
-- ampersand in text: Texas A&M becomes "Texas A\\\\&M" in JSON
-
-Examples of CORRECT escaping for LaTeX commands in JSON:
-- \\section{{Education}} becomes "\\\\section{{Education}}"
-- \\textbf{{Name}} becomes "\\\\textbf{{Name}}"
-- \\resumeItem{{text}} becomes "\\\\resumeItem{{text}}"
-
-Every single backslash in LaTeX must be doubled in your JSON output!
+CRITICAL REQUIREMENTS:
+1. Extract the candidate's REAL name and contact info from the master resume - do NOT use placeholder names
+2. Include ALL contact info available (phone, email, LinkedIn, GitHub)
+3. Include 4-6 bullet points per experience entry
+4. Include 3-4 bullet points per project
+5. Include ALL relevant projects from the master resume (not just 1-2)
+6. The resume should have enough content to fill one full page
+7. Reorder experiences and bullet points to prioritize relevance to the job
+8. Use the exact dates format: "Mon. YYYY -- Mon. YYYY" or "Mon. YYYY -- Present"
+9. For LinkedIn/GitHub, provide just the path without https:// prefix
 
 OUTPUT REQUIREMENTS:
-- "tailored_resume": Full resume in PLAIN TEXT format, preserving structure with simple formatting
-- "tailored_resume_latex": Full resume in LaTeX format using the PROVIDED TEMPLATE
-  * CRITICAL: Copy the LaTeX PREAMBLE (everything from \\\\documentclass to \\\\begin{{document}}) EXACTLY as provided - do NOT modify any \\\\newcommand definitions, \\\\usepackage statements, or formatting commands
-  * Only modify the CONTENT sections: heading (name, contact), education entries, experience entries, project entries, and skills
-  * The preamble includes custom commands like \\\\resumeItem, \\\\resumeSubheading - use these EXACTLY as defined, do not change their definitions
-  * DOUBLE ALL BACKSLASHES for valid JSON
+- "tailored_resume": Full resume in PLAIN TEXT format, well-structured
+- "resume_data": Structured data that will be used to generate LaTeX (follow the exact schema above)
 - "changes_made": 3-5 specific changes with rationale for each
 - "keywords_matched": Top 5-10 job keywords successfully incorporated
 - "keywords_missing": Important keywords the candidate genuinely lacks
@@ -124,14 +147,22 @@ OUTPUT REQUIREMENTS:
         # Parse JSON response
         result = json.loads(response.text)
 
+        # Generate LaTeX from structured data
+        if 'resume_data' in result:
+            try:
+                resume_data = parse_resume_data(result['resume_data'])
+                result['tailored_resume_latex'] = render_latex(resume_data)
+            except Exception as e:
+                print(f"LaTeX rendering error: {e}")
+                result['tailored_resume_latex'] = f"Error generating LaTeX: {str(e)}"
+
         return result
 
     except json.JSONDecodeError as e:
         # Log the error for debugging
         print(f"JSON Parse Error: {str(e)}")
         print(f"Response preview: {response.text[:500]}...")
-        # Fallback if JSON parsing fails
-        raise ValueError(f"Failed to parse AI response as JSON: {str(e)}. The AI may not have properly escaped LaTeX backslashes.")
+        raise ValueError(f"Failed to parse AI response as JSON: {str(e)}")
 
     except Exception as e:
         # Handle other errors
