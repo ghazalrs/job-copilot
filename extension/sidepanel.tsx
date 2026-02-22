@@ -541,10 +541,21 @@ function IndexSidePanel() {
                         {resumeFormat === 'latex' && (
                           <button
                             onClick={() => {
-                              const overleafUrl = `https://www.overleaf.com/docs?snip_uri=${
-                                encodeURIComponent('data:application/x-tex,' + encodeURIComponent(tailoredResult.tailored_resume_latex))
-                              }`
-                              chrome.tabs.create({ url: overleafUrl })
+                              // Use form submission for larger LaTeX content
+                              const form = document.createElement('form')
+                              form.method = 'POST'
+                              form.action = 'https://www.overleaf.com/docs'
+                              form.target = '_blank'
+
+                              const input = document.createElement('input')
+                              input.type = 'hidden'
+                              input.name = 'snip'
+                              input.value = tailoredResult.tailored_resume_latex
+
+                              form.appendChild(input)
+                              document.body.appendChild(form)
+                              form.submit()
+                              document.body.removeChild(form)
                             }}
                             style={{
                               padding: '8px 16px',
