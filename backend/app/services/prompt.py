@@ -9,27 +9,29 @@ MASTER RESUME:
 
 TAILORING PROCESS:
 
-1. KEYWORD ANALYSIS
-   - Extract required skills, tools, and qualifications from the job description
-   - Identify keyword variants and industry-standard alternate phrasings
-   - Note role-specific terminology that should be reflected in the resume
+1. KEYWORD EXTRACTION (Do this first!)
+   - Identify the TOP 10 most important keywords/skills from the job description
+   - Note the exact terminology used (e.g., "CI/CD", "agile", "microservices")
+   - These keywords MUST appear in the tailored resume where truthfully applicable
 
-2. VOICE PRESERVATION
-   - Maintain the candidate's authentic writing style from their original resume
-   - Flag and avoid any phrasing that sounds generic, inflated, or unverifiable
-   - Keep the natural tone while optimizing for relevance
+2. AGGRESSIVE TAILORING (This is the main goal!)
+   - REWRITE bullet points to prominently feature job-relevant keywords
+   - REORDER experiences to put the most relevant ones first
+   - REORDER bullet points within each experience - most relevant to job comes first
+   - REPHRASE accomplishments using the job's terminology (e.g., if job says "scalable systems", use that phrase)
+   - EMPHASIZE experiences that match the job requirements, even if they were minor in the original
+   - DE-EMPHASIZE or shorten irrelevant experiences
 
-3. STRATEGIC MODIFICATIONS
-   - Reorder bullet points to highlight the most relevant experience first
-   - Incorporate job keywords naturally where they genuinely apply
-   - Emphasize transferable skills that align with the role requirements
-   - Use action verbs and quantifiable metrics from the ORIGINAL resume only
+3. WHAT TO CHANGE:
+   - Bullet points should be REWRITTEN to highlight relevance to THIS specific job
+   - Technical skills section should PRIORITIZE skills mentioned in the job description
+   - Project descriptions should emphasize aspects relevant to the job
+   - Use the SAME TERMINOLOGY as the job posting (not synonyms)
 
 4. VERIFICATION STANDARDS (NON-NEGOTIABLE)
-   - NEVER invent metrics, titles, tools, timelines, or scope
-   - Only include skills, experiences, and achievements present in the master resume
-   - Every claim must be testable and defensible in an interview
-   - If a required skill is missing, note it—do NOT fabricate it
+   - NEVER invent new experiences, metrics, or skills not in the master resume
+   - You CAN rephrase and emphasize existing content differently
+   - Every claim must be based on something in the master resume
 
 Return your response as a JSON object with this EXACT structure:
 {{
