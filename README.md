@@ -4,77 +4,53 @@
 
 ## Overview
 
-Job Copilot helps job seekers optimize their resumes using AI. Extract job descriptions, manage your resume in the cloud, and get AI-powered insights.
-
-**Status:** ✅ Phase 1 & 2 Complete | 🔄 Phase 3 (AI Features) 
+Job Copilot helps job seekers optimize their resumes using AI. Extract job descriptions from any page, tailor your resume for specific roles, and generate cover letters - all from a browser side panel.
 
 ---
 
-## Current Features
+## Features
 
-### Phase 1: Job Analysis ✅
-- Extract job descriptions from any page
-- AI summarization (role, responsibilities, requirements, tech stack)
-- Powered by Gemini API
+### Job Analysis
+- Extract job descriptions from any job posting page
+- AI-powered summarization (role overview, responsibilities, requirements, tech stack)
 
-### Phase 2: Auth & Storage ✅
-- Google OAuth authentication (Chrome Identity API)
-- Cloud resume storage
-- Multi-device sync
-- JWT-based backend (FastAPI + SQLite/PostgreSQL)
+### Resume Tailoring
+- Customize your resume for each job
+- Get keyword matching analysis (matched vs. missing keywords)
+- View changes with explanations
+- Dual format output: Plain Text and LaTeX
+- One-click export to Overleaf
 
----
-
-## Coming Soon: Phase 3
-
-### 1. AI Resume Tailoring
-Customize your resume for each job using AI.
-
-**Endpoint:** `POST /resume/tailor`
-- Input: job description + master resume
-- Output: tailored resume with highlighted changes
-
-### 2. Resume Match Scoring
-Get a match percentage with improvement suggestions.
-
-**Endpoint:** `POST /resume/score`
-- Score: 0-100%
-- Strengths/weaknesses
-- Missing keywords
-- Specific suggestions
-
-### 3. RAG Chatbot
-Ask questions about your resume and get personalized advice.
-
-**Endpoint:** `POST /chat`
-- Context-aware responses
-- Powered by vector DB + LangChain
-- Conversation history
+### Cover Letter Generation
+- Generate personalized cover letters based on job + resume
+- Highlights key points from your experience
+- Dual format output: Plain Text and LaTeX
+- One-click export to Overleaf
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────┐
-│   CHROME EXTENSION               │
-│   • Side Panel UI (React)        │
-│   • Job Extraction               │
-│   • Auth & Resume Management     │
-└────────────┬─────────────────────┘
-             │ HTTPS + JWT
-┌────────────▼─────────────────────┐
-│   FASTAPI BACKEND                │
-│   • Google OAuth                 │
-│   • Resume CRUD                  │
-│   • AI Processing (Phase 3)      │
-└────────────┬─────────────────────┘
-             │
-┌────────────▼─────────────────────┐
-│   DATABASE                       │
-│   • Users                        │
-│   • Resumes                      │
-└──────────────────────────────────┘
++----------------------------------+
+|   CHROME EXTENSION               |
+|   - Side Panel UI (React)        |
+|   - Job Extraction               |
+|   - Resume & Cover Letter Gen    |
++----------------+-----------------+
+                 | HTTPS + JWT
++----------------v-----------------+
+|   FASTAPI BACKEND                |
+|   - Google OAuth                 |
+|   - Resume CRUD                  |
+|   - AI Processing (Gemini)       |
++----------------+-----------------+
+                 |
++----------------v-----------------+
+|   DATABASE (PostgreSQL)          |
+|   - Users                        |
+|   - Resumes                      |
++----------------------------------+
 ```
 
 ---
@@ -83,6 +59,7 @@ Ask questions about your resume and get personalized advice.
 
 - **Extension:** Plasmo, React, TypeScript, Chrome APIs
 - **Backend:** FastAPI, SQLAlchemy, PostgreSQL, JWT
+- **AI:** Google Gemini API
 
 ---
 
@@ -107,9 +84,10 @@ npm run dev
 ```
 
 ### Load Extension
-1. Chrome → `chrome://extensions/`
+1. Open Chrome and go to `chrome://extensions/`
 2. Enable "Developer mode"
-3. "Load unpacked" → `extension/build/chrome-mv3-dev`
+3. Click "Load unpacked"
+4. Select `extension/build/chrome-mv3-dev`
 
 ---
 
@@ -117,19 +95,19 @@ npm run dev
 
 ```
 job-copilot/
-├── extension/          # Chrome extension (Plasmo + React)
-│   ├── components/     # SignInView, ResumeTab
-│   ├── hooks/          # useAuth, useResume
-│   ├── lib/            # API client
-│   ├── background.ts   # Service worker
-│   └── sidepanel.tsx   # Main UI
-├── backend/            # FastAPI backend
+├── extension/              # Chrome extension (Plasmo + React)
+│   ├── components/         # SignInView, ResumeTab
+│   ├── hooks/              # useAuth, useResume
+│   ├── contents/           # Content script for job extraction
+│   ├── background.ts       # Service worker (Gemini API calls)
+│   └── sidepanel.tsx       # Main UI
+├── backend/                # FastAPI backend
 │   ├── app/
-│   │   ├── models/     # SQLAlchemy models
-│   │   ├── routers/    # API endpoints
-│   │   ├── schemas/    # Pydantic schemas
-│   │   └── services/   # Business logic
-│   └── alembic/        # Migrations
+│   │   ├── models/         # SQLAlchemy models
+│   │   ├── routers/        # API endpoints
+│   │   ├── schemas/        # Pydantic schemas
+│   │   └── services/       # AI service, LaTeX rendering
+│   └── alembic/            # Database migrations
 └── README.md
 ```
 
@@ -137,15 +115,20 @@ job-copilot/
 
 ## API Endpoints
 
-**Current:**
-- `POST /auth/google` - OAuth login
-- `POST /auth/google/access-token` - Chrome extension auth
-- `GET/PUT/DELETE /resume/master` - Resume CRUD
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/google` | POST | OAuth login |
+| `/auth/google/access-token` | POST | Chrome extension auth |
+| `/resume/master` | GET/PUT/DELETE | Resume CRUD |
+| `/resume/tailor` | POST | AI resume tailoring |
+| `/cover-letter/generate` | POST | AI cover letter generation |
 
-**Phase 3:**
-- `POST /resume/tailor` - AI resume tailoring
-- `POST /resume/score` - Match scoring
-- `POST /chat` - RAG chatbot
+---
+
+## Coming Soon
+
+- Resume match scoring with improvement suggestions
+- RAG-powered chatbot for resume advice
 
 ---
 
