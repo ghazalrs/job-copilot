@@ -32,6 +32,16 @@ type TailoredResumeResult = {
 type TailorStatus = "idle" | "tailoring" | "done" | "error"
 type ResumeFormat = "plain" | "latex"
 
+type CoverLetterResult = {
+  cover_letter: string
+  cover_letter_latex: string
+  key_points_highlighted: string[]
+  customization_notes: string[]
+}
+
+type CoverLetterStatus = "idle" | "generating" | "done" | "error"
+type CoverLetterFormat = "plain" | "latex"
+
 function IndexSidePanel() {
   
   // Auth state
@@ -67,6 +77,12 @@ function IndexSidePanel() {
   const [tailoredResult, setTailoredResult] = useState<TailoredResumeResult | null>(null)
   const [tailorError, setTailorError] = useState<string>("")
   const [resumeFormat, setResumeFormat] = useState<ResumeFormat>("plain")
+
+  // Cover letter state
+  const [coverLetterStatus, setCoverLetterStatus] = useState<CoverLetterStatus>("idle")
+  const [coverLetterResult, setCoverLetterResult] = useState<CoverLetterResult | null>(null)
+  const [coverLetterError, setCoverLetterError] = useState<string>("")
+  const [coverLetterFormat, setCoverLetterFormat] = useState<CoverLetterFormat>("plain")
 
   // Load API key on mount
   useEffect(() => {
@@ -174,6 +190,62 @@ function IndexSidePanel() {
     } catch (err) {
       setTailorError(err instanceof Error ? err.message : "Failed to tailor resume")
       setTailorStatus("error")
+    }
+  }
+
+  const generateCoverLetter = async () => {
+    if (!jobData || !token) {
+      setCoverLetterError("Missing job data or authentication")
+      return
+    }
+
+    setCoverLetterStatus("generating")
+    setCoverLetterError("")
+    setCoverLetterResult(null)
+
+    try {
+      const resumeResponse = await fetch('http://localhost:8000/resume/master', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!resumeResponse.ok) {
+        if (resumeResponse.status === 404) {
+          throw new Error("Please upload your resume in the Resume tab first")
+        }
+        throw new Error("Failed to fetch your resume")
+      }
+
+      const resumeData = await resumeResponse.json()
+
+      const coverLetterResponse = await fetch('http://localhost:8000/cover-letter/generate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          job_description: jobData.jobText,
+          master_resume: resumeData.raw_text,
+          company_name: "",
+          job_title: jobData.title || ""
+        })
+      })
+
+      if (!coverLetterResponse.ok) {
+        const errorData = await coverLetterResponse.json()
+        throw new Error(errorData.detail || "Failed to generate cover letter")
+      }
+
+      const result = await coverLetterResponse.json()
+      setCoverLetterResult(result)
+      setCoverLetterStatus("done")
+    } catch (err) {
+      setCoverLetterError(err instanceof Error ? err.message : "Failed to generate cover letter")
+      setCoverLetterStatus("error")
     }
   }
 
@@ -393,28 +465,53 @@ function IndexSidePanel() {
                   </details>
                 )}
 
-                {/* Tailor Resume Button */}
-                <button
-                  onClick={tailorResume}
-                  disabled={tailorStatus === 'tailoring'}
-                  style={{
-                    padding: '12px 16px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 6,
-                    cursor: tailorStatus === 'tailoring' ? 'wait' : 'pointer',
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                    marginTop: 16
-                  }}>
-                  {tailorStatus === 'tailoring' ? '✨ Tailoring Resume...' : '✨ Tailor My Resume'}
-                </button>
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                  <button
+                    onClick={tailorResume}
+                    disabled={tailorStatus === 'tailoring'}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      cursor: tailorStatus === 'tailoring' ? 'wait' : 'pointer',
+                      fontSize: 14,
+                      fontWeight: 'bold'
+                    }}>
+                    {tailorStatus === 'tailoring' ? '✨ Tailoring...' : '✨ Tailor Resume'}
+                  </button>
+                  <button
+                    onClick={generateCoverLetter}
+                    disabled={coverLetterStatus === 'generating'}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 6,
+                      cursor: coverLetterStatus === 'generating' ? 'wait' : 'pointer',
+                      fontSize: 14,
+                      fontWeight: 'bold'
+                    }}>
+                    {coverLetterStatus === 'generating' ? '📝 Generating...' : '📝 Cover Letter'}
+                  </button>
+                </div>
 
                 {/* Tailor Error */}
                 {tailorError && (
                   <div style={{ color: '#ef4444', padding: 12, backgroundColor: '#fef2f2', borderRadius: 6, fontSize: 14 }}>
                     {tailorError}
+                  </div>
+                )}
+
+                {/* Cover Letter Error */}
+                {coverLetterError && (
+                  <div style={{ color: '#ef4444', padding: 12, backgroundColor: '#fef2f2', borderRadius: 6, fontSize: 14 }}>
+                    {coverLetterError}
                   </div>
                 )}
 
@@ -551,6 +648,127 @@ function IndexSidePanel() {
                               input.type = 'hidden'
                               input.name = 'snip'
                               input.value = tailoredResult.tailored_resume_latex
+
+                              form.appendChild(input)
+                              document.body.appendChild(form)
+                              form.submit()
+                              document.body.removeChild(form)
+                            }}
+                            style={{
+                              padding: '8px 16px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 4,
+                              cursor: 'pointer',
+                              fontSize: 12
+                            }}>
+                            📄 Open in Overleaf
+                          </button>
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                )}
+
+                {/* Cover Letter Results */}
+                {coverLetterResult && coverLetterStatus === 'done' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 16, padding: 16, backgroundColor: '#f5f3ff', borderRadius: 8, border: '1px solid #c4b5fd' }}>
+                    <h3 style={{ margin: 0, fontSize: 16, color: '#6d28d9' }}>📝 Cover Letter</h3>
+
+                    {/* Key Points Highlighted */}
+                    <section>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: 14, color: '#6b7280' }}>Key Points Highlighted:</h4>
+                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        {coverLetterResult.key_points_highlighted.map((point, i) => (
+                          <li key={i} style={{ marginBottom: 4, fontSize: 13 }}>{point}</li>
+                        ))}
+                      </ul>
+                    </section>
+
+                    {/* Cover Letter Text */}
+                    <section>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <h4 style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>Cover Letter:</h4>
+                        <div style={{ display: 'flex', gap: 4, backgroundColor: '#e5e7eb', padding: 2, borderRadius: 4 }}>
+                          <button
+                            onClick={() => setCoverLetterFormat('plain')}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: 11,
+                              border: 'none',
+                              borderRadius: 3,
+                              cursor: 'pointer',
+                              backgroundColor: coverLetterFormat === 'plain' ? 'white' : 'transparent',
+                              color: coverLetterFormat === 'plain' ? '#8b5cf6' : '#6b7280',
+                              fontWeight: coverLetterFormat === 'plain' ? 'bold' : 'normal'
+                            }}>
+                            Plain Text
+                          </button>
+                          <button
+                            onClick={() => setCoverLetterFormat('latex')}
+                            style={{
+                              padding: '4px 12px',
+                              fontSize: 11,
+                              border: 'none',
+                              borderRadius: 3,
+                              cursor: 'pointer',
+                              backgroundColor: coverLetterFormat === 'latex' ? 'white' : 'transparent',
+                              color: coverLetterFormat === 'latex' ? '#8b5cf6' : '#6b7280',
+                              fontWeight: coverLetterFormat === 'latex' ? 'bold' : 'normal'
+                            }}>
+                            LaTeX
+                          </button>
+                        </div>
+                      </div>
+
+                      <pre style={{
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 12,
+                        maxHeight: 400,
+                        overflow: 'auto',
+                        backgroundColor: 'white',
+                        padding: 12,
+                        borderRadius: 4,
+                        border: '1px solid #c4b5fd',
+                        lineHeight: 1.6,
+                        fontFamily: coverLetterFormat === 'latex' ? 'monospace' : 'inherit'
+                      }}>
+                        {coverLetterFormat === 'plain' ? coverLetterResult.cover_letter : coverLetterResult.cover_letter_latex}
+                      </pre>
+
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button
+                          onClick={() => {
+                            const textToCopy = coverLetterFormat === 'plain'
+                              ? coverLetterResult.cover_letter
+                              : coverLetterResult.cover_letter_latex
+                            navigator.clipboard.writeText(textToCopy)
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#8b5cf6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontSize: 12
+                          }}>
+                          📋 Copy {coverLetterFormat === 'plain' ? 'Plain Text' : 'LaTeX'}
+                        </button>
+
+                        {coverLetterFormat === 'latex' && (
+                          <button
+                            onClick={() => {
+                              const form = document.createElement('form')
+                              form.method = 'POST'
+                              form.action = 'https://www.overleaf.com/docs'
+                              form.target = '_blank'
+
+                              const input = document.createElement('input')
+                              input.type = 'hidden'
+                              input.name = 'snip'
+                              input.value = coverLetterResult.cover_letter_latex
 
                               form.appendChild(input)
                               document.body.appendChild(form)
