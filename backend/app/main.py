@@ -5,7 +5,8 @@ from app.database import engine, Base
 from app.models import User, Resume, Template
 from app.routers import auth
 from app.routers import resume
-from app.routers import template 
+from app.routers import template
+from app.routers import cover_letter 
 
 
 # Create all database tables
@@ -20,9 +21,9 @@ app = FastAPI(
 
 # List of origins that are allowed to make requests to the API
 allowed_origins = [
-    "http://localhost:5173",      # Vite dev server (web app)
-    "http://localhost:3000",      # Alternative frontend port
-    "chrome-extension://*",       # Chrome extensions
+    "http://localhost:5173",      
+    "http://localhost:3000",      
+    "chrome-extension://*",       
 ]
 
 app.add_middleware(
@@ -37,13 +38,12 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(resume.router)
 app.include_router(template.router)
+app.include_router(cover_letter.router)
 
 
 @app.get("/")
 def read_root():
-    """
-    Root endpoint.
-    """
+
     return {
         "message": "Welcome to Job Copilot API",
         "status": "running",
@@ -52,9 +52,7 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    """
-    Health check endpoint.
-    """
+
     return {"status": "ok"}
 
 
