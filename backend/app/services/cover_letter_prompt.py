@@ -61,18 +61,36 @@ EXAMPLE LATEX STRUCTURE:
 \\documentclass[11pt]{{letter}}
 \\usepackage[margin=1in]{{geometry}}
 \\usepackage{{hyperref}}
+\\usepackage{{ragged2e}}
+
+\\AtBeginDocument{{\\RaggedRight}}
+\\setlength{{\\parindent}}{{0pt}}
 
 \\signature{{[Candidate Name]}}
-\\address{{[Your Address]}}
-
+\\date{{}}
 \\begin{{document}}
+
 \\begin{{letter}}{{Hiring Manager \\\\ [Company Name]}}
+
+% --- Contact info (left aligned) ---
+{{\\large \\textbf{{[Candidate Name]}}}}\\\\[4pt]
+[email@example.com] \\\\[4pt]
+[(123) 456-7890] \\\\[4pt]
+[Date]
+
+\\vspace{{12pt}}
+
 \\opening{{Dear Hiring Manager,}}
 
 [Body paragraphs here]
 
-\\closing{{Sincerely,}}
+\\vspace{{12pt}}
+
+Sincerely, \\\\
+[Candidate Name]
+
 \\end{{letter}}
+
 \\end{{document}}
 
 OUTPUT REQUIREMENTS:

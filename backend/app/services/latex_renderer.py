@@ -1,7 +1,3 @@
-"""
-This module renders structured resume data into LaTeX format using Jinja2 templating.
-"""
-
 from typing import List, Optional
 from pydantic import BaseModel
 from jinja2 import Environment, BaseLoader
@@ -59,7 +55,6 @@ def escape_latex(text: str) -> str:
     if not text:
         return text
 
-    # Order matters - escape backslash first
     replacements = [
         ('\\', r'\textbackslash{}'),
         ('&', r'\&'),
@@ -90,7 +85,6 @@ def escape_latex_url(text: str) -> str:
 
 def render_latex(data: ResumeData) -> str:
     
-    # Create Jinja2 environment with custom delimiters to avoid LaTeX conflicts
     env = Environment(
         loader=BaseLoader(),
         variable_start_string='<<',

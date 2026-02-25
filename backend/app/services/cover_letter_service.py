@@ -5,7 +5,6 @@ from app.config import settings
 from .cover_letter_prompt import get_cover_letter_prompt
 
 
-# Configure Gemini API
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
